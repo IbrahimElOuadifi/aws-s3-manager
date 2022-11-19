@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>AWS S3 Manager</title>
+    <link rel="stylesheet" href="./css/index.css" />
+    <script src="./renderer.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="tabs is-fullwidth is-boxed">
+          <ul>
+            <li class="is-active"><a>Create</a></li>
+            <li><a>Delete</a></li>
+            <li><a>All Buckets</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="content my-2" id="frame-offer">
+        <div class="field px-5 mt-2">
+          <input type="button" class="button is-fullwidth" id="folder-path" />
+        </div>
+        <div class="columns">
+          <div class="column is-half">
+            <div class="box m-0" id="foler-detail"></div>
+          </div>
+          <div class="column is-half">
+            <div class="box m-0">
+              <div class="field">
+                <textarea
+                  class="textarea has-fixed-size"
+                  rows="12"
+                  readonly
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="content my-2 is-hidden" id="frame-detail">
+        <div class="field px-5 mt-2">
+          <input type="button" class="button is-fullwidth" />
+        </div>
+        <div class="columns">
+          <div class="column is-half">
+            <div class="box m-0 offers">
+              <div class="field">
+                <input
+                  class="button is-fullwidth is-small is-dark"
+                  type="button"
+                  value="Offer Name"
+                />
+              </div>
+              <div class="field">
+                <input
+                  class="button is-fullwidth is-small"
+                  type="button"
+                  value="Offer Name"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="column is-half">
+            <div class="box m-0">
+              <div class="field">
+                <textarea
+                  class="textarea has-fixed-size"
+                  rows="12"
+                  readonly
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="py-2">
+        <div class="buttons is-right mx-4">
+          <button type="button" class="button is-danger">CLOSE</button>
+          <button type="button" class="button is-warning">BACK</button>
+          <button type="button" class="button is-success">NEXT</button>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

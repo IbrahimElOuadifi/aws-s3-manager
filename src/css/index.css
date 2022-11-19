@@ -1,0 +1,13 @@
+@import url(./bulma.css);
+
+* {
+  box-shadow: none !important;
+}
+
+html {
+  overflow-y: hidden;
+}
+
+.box {
+  height: 100%;
+}
