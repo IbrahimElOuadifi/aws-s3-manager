@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <title>AWS S3 Manager</title>
-    <link rel="stylesheet" href="./css/index.css" />
-    <script src="./renderer.js" defer></script>
+    <link rel="stylesheet" href="../css/index.css" />
+    <script src="./delete.js" defer></script>
   </head>
   <body class="is-flex is-flex-direction-column is-justify-content-space-between">
       <div class="header">
         <div class="tabs is-fullwidth is-boxed">
           <ul>
-            <li class="is-active"><a>Create</a></li>
-            <li><a>Delete</a></li>
-            <li><a>All Buckets</a></li>
+            <li><a href="./create.html">Create</a></li>
+            <li class="is-active"><a href="./delete.html">Delete</a></li>
+            <li><a href="./list.html">All Buckets</a></li>
           </ul>
         </div>
       </div>
@@ -44,23 +44,7 @@
           <label class="label">Region</label>
           <div class="control">
             <div class="select is-fullwidth">
-              <select id="select-region">
-                <option>us-east-1</option>
-                <option>us-east-2</option>
-                <option>us-west-1</option>
-                <option>us-west-2</option>
-                <option>ca-central-1</option>
-                <option>eu-west-1</option>
-                <option>eu-west-2</option>
-                <option>eu-west-3</option>
-                <option>eu-central-1</option>
-                <option>ap-northeast-1</option>
-                <option>ap-northeast-2</option>
-                <option>ap-southeast-1</option>
-                <option>ap-southeast-2</option>
-                <option>ap-south-1</option>
-                <option>sa-east-1</option>
-              </select>
+              <select id="select-region"></select>
             </div>
           </div>
           <div class="field">
@@ -75,11 +59,25 @@
       </div>
         </div>
       </div>
-      <footer class="py-5">
-        <div class="buttons is-right mx-4">
-          <button type="button" class="button is-danger" id="main-close">CLOSE</button>
-          <button type="button" class="button is-warning" id="main-back">BACK</button>
-          <button type="button" class="button is-success" id="main-submit">SUBMIT</button>
+      <div class="content my-2 px-5 is-hidden" id="frame-result">
+        <div class="columns">
+          <div class="column"><button type="button" class="button is-fullwidth">EXPORT</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth">COPY</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth">CLEAN</button></div>
+        </div>
+        <div class="field">
+          <textarea class="textarea has-fixed-size" readonly rows="18"></textarea>
+        </div>
+        <div class="field mt-2">
+          <input type="text" class="input is-fullwidth" id="folder-path" readonly />
+        </div>
+      </div>
+      <footer class="footer py-4">
+        <div class="columns">
+          <div class="column"><button type="button" class="button is-fullwidth is-light" id="main-close">CLOSE</button></div>
+          <div class="column is-hidden"><button type="button" class="button is-fullwidth is-danger" id="main-cancel">CANCEL</button></div>
+          <div class="column is-hidden"><button type="button" class="button is-fullwidth is-warning" id="main-stop">STOP</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth is-success" id="main-submit">SUBMIT</button></div>
         </div>
       </footer>
   </body>

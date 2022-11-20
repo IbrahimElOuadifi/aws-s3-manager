@@ -21,7 +21,7 @@ const createWindow = () => {
     },
   })
 
-  mainWindow.loadFile(path.join(__dirname, 'index.html'))
+  mainWindow.loadFile(path.join(__dirname, './pages/create.html'))
   mainWindow.setResizable(false)
   mainWindow.removeMenu()
 

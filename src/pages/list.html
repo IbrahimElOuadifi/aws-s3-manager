@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>AWS S3 Manager</title>
+    <link rel="stylesheet" href="../css/index.css" />
+    <script src="./list.js" defer></script>
+  </head>
+  <body class="is-flex is-flex-direction-column is-justify-content-space-between">
+      <div class="header">
+        <div class="tabs is-fullwidth is-boxed">
+          <ul>
+            <li><a href="./create.html">Create</a></li>
+            <li><a href="./delete.html">Delete</a></li>
+            <li class="is-active"><a href="./list.html">All Buckets</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="content my-2 px-5" id="frame-detail">
+        <div class="field mt-2">
+          <label class="label">Offers path folder</label>
+          <input type="button" class="button is-fullwidth" id="folder-path" />
+        </div>
+        <label class="label">Select offer</label>
+        <div class="columns">
+          <div class="column is-half">
+            <div class="box">
+              <div id="folder-details"></div>
+            </div>
+          </div>
+          <div class="column is-half">
+            <div class="box">
+              <div class="field">
+                <textarea
+                  class="textarea has-fixed-size"
+                  rows="8"
+                  readonly
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Region</label>
+          <div class="control">
+            <div class="select is-fullwidth">
+              <select id="select-region"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Bucket name</label>
+            <div class="columns">
+              <div class="column"><label class="label">include lowercase</label><input type="button" class="button is-fullwidth bucket-name-char is-dark" data-pattern="a-z" value="LOWERCASE"></div>
+              <div class="column"><label class="label">include numbers</label><input type="button" class="button is-fullwidth bucket-name-char" data-pattern="0-9" value="NUMBERS"></div>
+              <div class="column"><label class="label">include dashes</label><input type="button" class="button is-fullwidth bucket-name-char" data-pattern="-" value="DASHES"></div>
+              <div class="column"><label class="label">name length</label><input type="number" class="input is-fullwidth" id="bucket-name-length" placeholder="name length"></div>
+              <div class="column"><label class="label">number</label><input type="number" class="input is-fullwidth" id="bucket-number" placeholder="number"></div>
+          </div>
+      </div>
+        </div>
+      </div>
+      <div class="content my-2 px-5 is-hidden" id="frame-result">
+        <div class="columns">
+          <div class="column"><button type="button" class="button is-fullwidth">EXPORT</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth">COPY</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth">CLEAN</button></div>
+        </div>
+        <div class="field">
+          <textarea class="textarea has-fixed-size" readonly rows="18"></textarea>
+        </div>
+        <div class="field mt-2">
+          <input type="text" class="input is-fullwidth" id="folder-path" readonly />
+        </div>
+      </div>
+      <footer class="footer py-4">
+        <div class="columns">
+          <div class="column"><button type="button" class="button is-fullwidth is-light" id="main-close">CLOSE</button></div>
+          <div class="column is-hidden"><button type="button" class="button is-fullwidth is-danger" id="main-cancel">CANCEL</button></div>
+          <div class="column is-hidden"><button type="button" class="button is-fullwidth is-warning" id="main-stop">STOP</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth is-success" id="main-submit">SUBMIT</button></div>
+        </div>
+      </footer>
+  </body>
+</html>
