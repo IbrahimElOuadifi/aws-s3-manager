@@ -4,10 +4,9 @@
     <meta charset="UTF-8" />
     <title>AWS S3 Manager</title>
     <link rel="stylesheet" href="./css/index.css" />
-    <script src="./renderer.js"></script>
+    <script src="./renderer.js" defer></script>
   </head>
-  <body>
-    <div class="container">
+  <body class="is-flex is-flex-direction-column is-justify-content-space-between">
       <div class="header">
         <div class="tabs is-fullwidth is-boxed">
           <ul>
@@ -17,70 +16,71 @@
           </ul>
         </div>
       </div>
-      <div class="content my-2" id="frame-offer">
-        <div class="field px-5 mt-2">
+      <div class="content my-2 px-5" id="frame-detail">
+        <div class="field mt-2">
+          <label class="label">Offers path folder</label>
           <input type="button" class="button is-fullwidth" id="folder-path" />
         </div>
+        <label class="label">Select offer</label>
         <div class="columns">
           <div class="column is-half">
-            <div class="box m-0" id="foler-detail"></div>
+            <div class="box">
+              <div id="folder-details"></div>
+            </div>
           </div>
           <div class="column is-half">
-            <div class="box m-0">
+            <div class="box">
               <div class="field">
                 <textarea
                   class="textarea has-fixed-size"
-                  rows="12"
+                  rows="8"
                   readonly
                 ></textarea>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="content my-2 is-hidden" id="frame-detail">
-        <div class="field px-5 mt-2">
-          <input type="button" class="button is-fullwidth" />
-        </div>
-        <div class="columns">
-          <div class="column is-half">
-            <div class="box m-0 offers">
-              <div class="field">
-                <input
-                  class="button is-fullwidth is-small is-dark"
-                  type="button"
-                  value="Offer Name"
-                />
-              </div>
-              <div class="field">
-                <input
-                  class="button is-fullwidth is-small"
-                  type="button"
-                  value="Offer Name"
-                />
-              </div>
+        <div class="field">
+          <label class="label">Region</label>
+          <div class="control">
+            <div class="select is-fullwidth">
+              <select id="select-region">
+                <option>us-east-1</option>
+                <option>us-east-2</option>
+                <option>us-west-1</option>
+                <option>us-west-2</option>
+                <option>ca-central-1</option>
+                <option>eu-west-1</option>
+                <option>eu-west-2</option>
+                <option>eu-west-3</option>
+                <option>eu-central-1</option>
+                <option>ap-northeast-1</option>
+                <option>ap-northeast-2</option>
+                <option>ap-southeast-1</option>
+                <option>ap-southeast-2</option>
+                <option>ap-south-1</option>
+                <option>sa-east-1</option>
+              </select>
             </div>
           </div>
-          <div class="column is-half">
-            <div class="box m-0">
-              <div class="field">
-                <textarea
-                  class="textarea has-fixed-size"
-                  rows="12"
-                  readonly
-                ></textarea>
-              </div>
-            </div>
+          <div class="field">
+            <label class="label">Bucket name</label>
+            <div class="columns">
+              <div class="column"><label class="label">include lowercase</label><input type="button" class="button is-fullwidth bucket-name-char is-dark" data-pattern="a-z" value="LOWERCASE"></div>
+              <div class="column"><label class="label">include numbers</label><input type="button" class="button is-fullwidth bucket-name-char" data-pattern="0-9" value="NUMBERS"></div>
+              <div class="column"><label class="label">include dashes</label><input type="button" class="button is-fullwidth bucket-name-char" data-pattern="-" value="DASHES"></div>
+              <div class="column"><label class="label">name length</label><input type="number" class="input is-fullwidth" id="bucket-name-length" placeholder="name length"></div>
+              <div class="column"><label class="label">number</label><input type="number" class="input is-fullwidth" id="bucket-number" placeholder="number"></div>
           </div>
+      </div>
         </div>
       </div>
-      <footer class="py-2">
+      <footer class="py-5">
         <div class="buttons is-right mx-4">
-          <button type="button" class="button is-danger">CLOSE</button>
-          <button type="button" class="button is-warning">BACK</button>
-          <button type="button" class="button is-success">NEXT</button>
+          <button type="button" class="button is-danger" id="main-close">CLOSE</button>
+          <button type="button" class="button is-warning" id="main-back">BACK</button>
+          <button type="button" class="button is-success" id="main-submit">SUBMIT</button>
         </div>
       </footer>
-    </div>
   </body>
 </html>
