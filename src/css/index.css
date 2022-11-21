@@ -13,8 +13,7 @@ body {
 }
 
 .box {
-  height: 100;
-  border: 2px solid #ccc;
+  height: 100%;
 }
 
 .box #folder-details {

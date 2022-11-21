@@ -1,10 +1,19 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const Store = require('electron-store')
 const path = require('path')
-const { readdir } = require('fs/promises')
+const { S3 } = require('aws-sdk')
+const { readFile, readdir } = require('fs/promises')
 const { randexp } = require('randexp')
+const { getType } = require('mime')
+require('dotenv').config()
 
-const devTools = false
+const s3 = new S3({
+    region: process.env.AWS_REGION,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+})
+
+const devTools = true
 
 if (require('electron-squirrel-startup')) {
   app.quit()
@@ -22,8 +31,8 @@ const createWindow = () => {
   })
 
   mainWindow.loadFile(path.join(__dirname, './pages/create.html'))
-  mainWindow.setResizable(false)
-  mainWindow.removeMenu()
+  // mainWindow.setResizable(false)
+  // mainWindow.removeMenu()
 
   if (devTools) mainWindow.webContents.openDevTools()
 }
@@ -63,21 +72,132 @@ ipcMain.handle('get-default-path', async () => {
   return { files, path }
 })
 
-ipcMain.on('submit-create', ({ reply }, { fields }) => {
-  console.log(fields)
+ipcMain.handle('get-last-buckets', async (_, { number }) => {
+  console.log(number)
+  const { Buckets } = await s3.listBuckets().promise()
+  const buckets = Buckets.sort((a, b) => a.CreationDate - b.CreationDate).map(({ Name }) => Name).slice(0, number)
+  return { buckets }
+})
 
-  // selected_folder
-  // region
-  // bucket_name_chars
-  // bucket_name_length
-  // bucket_number
-
-  const buckets = []
-  
-  for(let i = 0; i < fields.bucket_number; i++) {
-    const bucketName = randexp(`[a-z][${fields.bucket_name_chars}][a-z]{${fields.bucket_name_length - 2}}`)
-    buckets.push(bucketName)
+ipcMain.handle('get-empty-buckets', async ({ sender }) => {
+  try {
+    const { Buckets } = (await s3.listBuckets().promise())
+    const buckets = []
+    for(const bucket of Buckets) {
+      console.log(bucket.Name)
+      try {
+        sender.send('progress', { index: Buckets.indexOf(bucket), total: Buckets.length, message: `Checking bucket ${bucket.Name} ${Buckets.indexOf(bucket)} of ${Buckets.length}` })
+        const { Contents } = await s3.listObjects({ Bucket: bucket.Name }).promise()
+        console.log(Contents.length)
+        if(Contents.length === 0) {
+        buckets.push(bucket.Name)
+      }
+      bucket.length = Contents.length
+      } catch ({ message }) {
+        console.log(message)
+      }
+    }
+    console.log(buckets, Buckets.length)
+  return { buckets }
+  } catch ({ message }) {
+    console.log(message)
   }
+})
+
+ipcMain.on('submit-create', async ({ reply }, { fields }) => {
+  try {
+    console.log(fields)
+
+    // selected_folder
+    // region
+    // bucket_name_chars
+    // bucket_name_length
+    // bucket_number
+
+    const { selected_folder, region, bucket_name_chars, bucket_name_length, bucket_number } = fields
+
+    const files = (await readdir(selected_folder, { withFileTypes: true })).filter((dir) => dir.isFile()).map(({ name }) => ({name, path: `${selected_folder}\\${name}`}))
+    console.log(files)
+
+    for(const file of files) {
+      const content = await readFile(file.path, 'utf8')
+      file.content = content
+    }
+
+    const buckets = []
+    
+    for(let i = 0; i < bucket_number; i++) {
+      const bucketName = randexp(`[a-z][${fields.bucket_name_chars}][a-z]{${fields.bucket_name_length - 2}}`)
+      await s3.createBucket({ Bucket: bucketName, ACL: 'public-read', CreateBucketConfiguration: { LocationConstraint: fields.region } }).promise()
+      await s3.putBucketPolicy({ Bucket: bucketName, Policy: JSON.stringify({ Version: '2012-10-17', Statement: [{ Sid: 'PublicReadGetObject', Effect: 'Allow', Principal: '*', Action: ['s3:GetObject'], Resource: [`arn:aws:s3:::${bucketName}/*`] }] }) }).promise()
+      await s3.putBucketCors({ Bucket: bucketName, CORSConfiguration: { CORSRules: [{ AllowedHeaders: ['*'], AllowedMethods: ['GET'], AllowedOrigins: ['*'], ExposeHeaders: ['ETag'], MaxAgeSeconds: 3000 }] } }).promise()
+      await s3.putPublicAccessBlock({ Bucket: bucketName, PublicAccessBlockConfiguration: { BlockPublicAcls: false, BlockPublicPolicy: false, IgnorePublicAcls: false, RestrictPublicBuckets: false } }).promise()
+      for(const file of files) {
+        const extension = file.name.split('.').pop()
+        const ContentType = getType(extension)
+        console.log(ContentType)
+        await s3.putObject({ Bucket: bucketName, Key: `${bucketName}${file.name.replace('_', '')}`, Body: file.content, ACL: 'public-read', ContentType  }).promise()
+      }
+    }
+    reply('submitted', { buckets })
+  } catch ({ message }) {
+    console.log(message)
+  }
+})
+
+// 
+ipcMain.on('submit-delete', async ({ reply }, { buckets }) => {
+  try {
+    for(bucket of buckets) {
+      const { Contents } = await s3.listObjects({ Bucket: bucket }).promise()
+      if(Contents.length) {
+        await s3.deleteObjects({ Bucket: bucket, Delete: { Objects: Contents.map(({ Key }) => ({ Key })) } }).promise()
+        reply('message', { message: `Deleted ${Contents.length} objects from ${bucket}` })
+      } else {
+        reply('message', { message: `Bucket ${bucket} is empty` })
+      }
+      await s3.deleteBucket({ Bucket: bucket }).promise()
+      reply('message', { message: `Deleted bucket ${bucket}` })
+    }
+    reply('completed')
+  } catch ({ message }) {
+    console.log(message, 'error')
+  }
+
+
+//  delete all objects in bucket
+// s3.listObjects({
+//     Bucket: 'fdbkiicvkxu03'
+// }, (err, data) => {
+//     if (err) {
+//         console.log(err.message)
+//     } else {
+//         // delete many objects
+//         s3.deleteObjects({
+//             Bucket: 'fdbkiicvkxu03',
+//             Delete: {
+//                 Objects: data.Contents.map(({ Key }) => ({ Key }))
+//             }
+//         }, (err, data) => {
+//             if (err) {
+//                 console.log(err.message)
+//             } else {
+//                 console.log(data)
+//                 s3.deleteBucket({
+//                     Bucket: 'my-bucket-tgerzgzfzaefazef'
+//                 }, (err, data) => {
+//                     if (err) {
+//                         console.log(err.message)
+//                     } else {
+//                         console.log(data)
+//                     }
+//                 })
+//             }
+//         })
+        
+//     }
+// })
+
 
   reply('submitted', { buckets })
 })
