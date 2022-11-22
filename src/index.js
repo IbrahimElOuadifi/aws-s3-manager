@@ -120,7 +120,8 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
     console.log(files)
 
     for(const file of files) {
-      const content = await readFile(file.path, 'utf8')
+      // const content = createReadStream(file.path).on('error', (err) => console.log(err))
+      const content = await readFile(file.path)
       file.content = content
     }
 
@@ -128,16 +129,18 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
     
     for(let i = 0; i < bucket_number; i++) {
       const bucketName = randexp(`[a-z][${fields.bucket_name_chars}][a-z]{${fields.bucket_name_length - 2}}`)
+      console.log(bucketName)
       await s3.createBucket({ Bucket: bucketName, ACL: 'public-read', CreateBucketConfiguration: { LocationConstraint: fields.region } }).promise()
-      await s3.putBucketPolicy({ Bucket: bucketName, Policy: JSON.stringify({ Version: '2012-10-17', Statement: [{ Sid: 'PublicReadGetObject', Effect: 'Allow', Principal: '*', Action: ['s3:GetObject'], Resource: [`arn:aws:s3:::${bucketName}/*`] }] }) }).promise()
-      await s3.putBucketCors({ Bucket: bucketName, CORSConfiguration: { CORSRules: [{ AllowedHeaders: ['*'], AllowedMethods: ['GET'], AllowedOrigins: ['*'], ExposeHeaders: ['ETag'], MaxAgeSeconds: 3000 }] } }).promise()
       await s3.putPublicAccessBlock({ Bucket: bucketName, PublicAccessBlockConfiguration: { BlockPublicAcls: false, BlockPublicPolicy: false, IgnorePublicAcls: false, RestrictPublicBuckets: false } }).promise()
+      
       for(const file of files) {
         const extension = file.name.split('.').pop()
         const ContentType = getType(extension)
-        console.log(ContentType)
-        await s3.putObject({ Bucket: bucketName, Key: `${bucketName}${file.name.replace('_', '')}`, Body: file.content, ACL: 'public-read', ContentType  }).promise()
+        console.log(ContentType, 'extension')
+        await s3.putObject({ Bucket: bucketName, Key: `${bucketName}${file.name.replace('_', '')}`, Body: Buffer.from(file.content), ACL: 'public-read', ContentType  }).promise()
       }
+
+      console.log(bucketName? `https://${bucketName}.s3.${region}.amazonaws.com` : 'error')
     }
     reply('submitted', { buckets })
   } catch ({ message }) {
