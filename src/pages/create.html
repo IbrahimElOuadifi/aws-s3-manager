@@ -65,11 +65,14 @@
           <div class="column"><button type="button" class="button is-fullwidth">COPY</button></div>
           <div class="column"><button type="button" class="button is-fullwidth">CLEAN</button></div>
         </div>
-        <div class="field">
-          <textarea class="textarea has-fixed-size" readonly rows="18"></textarea>
+        <div class="field control">
+          <textarea class="textarea has-fixed-size" id="buckets" readonly rows="16"></textarea>
         </div>
         <div class="field mt-2">
-          <input type="text" class="input is-fullwidth" id="folder-path" readonly />
+          <input type="text" class="input is-fullwidth" id="message" readonly />
+        </div>
+        <div class="field mt-2">
+          <progress class="progress is-primary is-fullwidth" value="0" max="0" id="progress"></progress>
         </div>
       </div>
       <footer class="footer py-4">

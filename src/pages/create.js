@@ -67,16 +67,41 @@ const folderDetailHtml = (filename) => `<div class="field"><input class="button 
 
 ipcRenderer.invoke('get-default-path').then(({ files, path }) => setFolderDetail(path, files))
 
-ipcRenderer.on('submitted', () => {
+ipcRenderer.on('submit-create', () => {
     document.getElementById('frame-detail').classList.add('is-hidden')
     document.getElementById('frame-result').classList.remove('is-hidden')
     document.getElementById('main-stop').parentElement.classList.remove('is-hidden')
     document.getElementById('main-submit').parentElement.classList.add('is-hidden')
+    document.getElementById('buckets').value = 'Creating buckets...'
+    document.getElementById('buckets').parentElement.classList.add('is-loading')
+
+})
+
+ipcRenderer.on('progress', (_, { message, index, total }) => {
+    document.getElementById('message').value = message
+    document.getElementById('progress').value = index
+    document.getElementById('progress').max = total
+})
+
+ipcRenderer.on('message', (_, { message }) => {
+    document.getElementById('message').value = message
+})
+
+ipcRenderer.on('submit-create-result', (_, { buckets }) => {
+    document.getElementById('main-stop').parentElement.classList.add('is-hidden')
+    document.getElementById('main-cancel').parentElement.classList.remove('is-hidden')
+    document.getElementById('buckets').parentElement.classList.remove('is-loading')
+    document.getElementById('buckets').value = buckets.join('\r\n')
+})
+
+ipcRenderer.on('submit-create-error', () => {
+    document.getElementById('main-stop').parentElement.classList.add('is-hidden')
+    document.getElementById('main-cancel').parentElement.classList.remove('is-hidden')
+    document.getElementById('buckets').parentElement.classList.remove('is-loading') 
 })
 
 document.getElementById('main-stop').addEventListener('click', () => {
-    document.getElementById('main-stop').parentElement.classList.add('is-hidden')
-    document.getElementById('main-cancel').parentElement.classList.remove('is-hidden')
+    ipcRenderer.send('submit-stop')
 })
 
 document.getElementById('main-cancel').addEventListener('click', () => {
@@ -84,4 +109,8 @@ document.getElementById('main-cancel').addEventListener('click', () => {
     document.getElementById('main-submit').parentElement.classList.remove('is-hidden')
     document.getElementById('frame-detail').classList.remove('is-hidden')
     document.getElementById('frame-result').classList.add('is-hidden')
+    document.getElementById('message').value = ''
+    document.getElementById('progress').value = 0
+    document.getElementById('progress').max = 0
+    document.getElementById('buckets').value = ''
 })

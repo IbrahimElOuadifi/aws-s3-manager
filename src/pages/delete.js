@@ -15,8 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('button-last-buckets').addEventListener('click', () => {
         const number = document.getElementById('input-number-buckets').value
+        document.getElementById('buckets').parentElement.classList.add('is-loading')
         ipcRenderer.invoke('get-last-buckets', { number }).then(({ buckets }) => {
             document.getElementById('buckets').value = buckets.join('\n')
+            document.getElementById('buckets').parentElement.classList.remove('is-loading')
         })
     })
 
@@ -27,20 +29,19 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 })
 
-ipcRenderer.on('submitted', () => {
+ipcRenderer.on('submit-delete', () => {
     document.getElementById('main-cancel').parentElement.classList.remove('is-hidden')
     document.getElementById('main-submit').parentElement.classList.add('is-hidden')
 })
 
 ipcRenderer.on('progress', (_, { index, total, message }) => {
-    console.log(index, total, message, document.getElementById('progress'), document.getElementById('notif'))
     document.getElementById('progress').value = index
     document.getElementById('progress').max = total
-    document.getElementById('notif').value = message
+    document.getElementById('message').value = message
 })
 
 ipcRenderer.on('message', (_, { message }) => {
-    document.getElementById('notif').value = message
+    document.getElementById('message').value = message
 })
 
 ipcRenderer.on('completed', () => {

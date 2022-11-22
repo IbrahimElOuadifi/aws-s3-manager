@@ -120,29 +120,49 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
     console.log(files)
 
     for(const file of files) {
-      // const content = createReadStream(file.path).on('error', (err) => console.log(err))
       const content = await readFile(file.path)
       file.content = content
     }
 
+    if(!selected_folder && !region && !bucket_name_chars && !bucket_name_length && !bucket_number) {
+      await dialog.showMessageBox({ type: 'error', message: 'Please fill all fields' })
+      return reply('submit-create-error')
+    }
+
+    if(bucket_number.length < 1) {
+      await dialog.showMessageBox({ type: 'error', message: 'Please create at least one bucket' })
+      return reply('submit-create-error')
+    }
+
+    if(bucket_name_length < 5 || bucket_name_length > 63) {
+      await dialog.showMessageBox({ type: 'error', message: 'Bucket name length must be between 5 and 63 characters' })
+      return reply('submit-create-error')
+    }
+
+
+    reply('submit-create', { bucket_number })
+
     const buckets = []
     
     for(let i = 0; i < bucket_number; i++) {
-      const bucketName = randexp(`[a-z][${fields.bucket_name_chars}][a-z]{${fields.bucket_name_length - 2}}`)
-      console.log(bucketName)
-      await s3.createBucket({ Bucket: bucketName, ACL: 'public-read', CreateBucketConfiguration: { LocationConstraint: fields.region } }).promise()
+      const bucketName = randexp(`[a-z][${bucket_name_chars}][a-z]{${bucket_name_length - 2}}`)
+      await s3.createBucket({ Bucket: bucketName, ACL: 'bucket-owner-read', CreateBucketConfiguration: { LocationConstraint: region } }).promise()
       await s3.putPublicAccessBlock({ Bucket: bucketName, PublicAccessBlockConfiguration: { BlockPublicAcls: false, BlockPublicPolicy: false, IgnorePublicAcls: false, RestrictPublicBuckets: false } }).promise()
+      reply('progress', { message: `${i} of ${bucket_number} -- Bucket ${bucketName} created`, index: i, total: bucket_number })
       
       for(const file of files) {
         const extension = file.name.split('.').pop()
         const ContentType = getType(extension)
-        console.log(ContentType, 'extension')
         await s3.putObject({ Bucket: bucketName, Key: `${bucketName}${file.name.replace('_', '')}`, Body: Buffer.from(file.content), ACL: 'public-read', ContentType  }).promise()
+        // await new Promise((resolve) => setTimeout(resolve, 1000))
       }
 
       console.log(bucketName? `https://${bucketName}.s3.${region}.amazonaws.com` : 'error')
+      reply('progress', { message: `${i + 1} of ${bucket_number} -- Put ${files.length} Object${files.length <= 1 ? '' :'s'} in Bucket ${bucketName}`, index: i + 1, total: bucket_number })
+      buckets.push(bucketName)
     }
-    reply('submitted', { buckets })
+
+    reply('submit-create-result', { buckets })
   } catch ({ message }) {
     console.log(message)
   }
@@ -162,45 +182,10 @@ ipcMain.on('submit-delete', async ({ reply }, { buckets }) => {
       await s3.deleteBucket({ Bucket: bucket }).promise()
       reply('message', { message: `Deleted bucket ${bucket}` })
     }
-    reply('completed')
+    reply('complete-delete')
   } catch ({ message }) {
     console.log(message, 'error')
   }
-
-
-//  delete all objects in bucket
-// s3.listObjects({
-//     Bucket: 'fdbkiicvkxu03'
-// }, (err, data) => {
-//     if (err) {
-//         console.log(err.message)
-//     } else {
-//         // delete many objects
-//         s3.deleteObjects({
-//             Bucket: 'fdbkiicvkxu03',
-//             Delete: {
-//                 Objects: data.Contents.map(({ Key }) => ({ Key }))
-//             }
-//         }, (err, data) => {
-//             if (err) {
-//                 console.log(err.message)
-//             } else {
-//                 console.log(data)
-//                 s3.deleteBucket({
-//                     Bucket: 'my-bucket-tgerzgzfzaefazef'
-//                 }, (err, data) => {
-//                     if (err) {
-//                         console.log(err.message)
-//                     } else {
-//                         console.log(data)
-//                     }
-//                 })
-//             }
-//         })
-        
-//     }
-// })
-
 
   reply('submitted', { buckets })
 })
