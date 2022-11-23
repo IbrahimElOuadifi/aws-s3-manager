@@ -73,7 +73,13 @@ ipcMain.handle('get-default-path', async () => {
 })
 
 ipcMain.handle('get-last-buckets', async (_, { number }) => {
-  console.log(number)
+  if(!number || isNaN(number)) {
+    await dialog.showErrorBox('Error', 'Please enter a number')
+    return { buckets: [] }
+  } else if(number < 1) {
+    await dialog.showErrorBox('Error', 'Please enter a number greater than 0')
+    return { buckets: [] }
+  }
   const { Buckets } = await s3.listBuckets().promise()
   const buckets = Buckets.sort((a, b) => a.CreationDate - b.CreationDate).map(({ Name }) => Name).slice(0, number)
   return { buckets }
@@ -94,25 +100,45 @@ ipcMain.handle('get-empty-buckets', async ({ sender }) => {
       }
       bucket.length = Contents.length
       } catch ({ message }) {
-        console.log(message)
+        await dialog.showErrorBox('Error', message)
       }
     }
     console.log(buckets, Buckets.length)
+    await dialog.showMessageBox({ type: 'info', message: `Found ${buckets.length} empty buckets out of ${Buckets.length} total buckets` })
   return { buckets }
   } catch ({ message }) {
-    console.log(message)
+    await dialog.showErrorBox('Error', message)
   }
 })
+
+ipcMain.handle('get-buckets-with-contents', async () => {
+  try {
+    const { Buckets } = (await s3.listBuckets().promise())
+    // const buckets = []
+    // for(const bucket of Buckets.slice(0, 10)) {
+    //   console.log(bucket.Name)
+    //   try {
+    //     const { Contents } = s3.listObjects({ Bucket: bucket.Name }).promise()
+    //     console.log(Buckets.slice(0, 10))
+    //       bucket.Contents = Contents
+    //       buckets.push(bucket)
+    //   bucket.length = Contents.length
+    //   } catch ({ message }) {
+    //     await dialog.showErrorBox('Error', message)
+    //   }
+    // }
+    console.log(Buckets.sort((a, b) => a.CreationDate - b.CreationDate).slice(0, 10).map(({ CreationDate }) => CreationDate), Buckets.length)
+    await dialog.showMessageBox({ type: 'info', message: `Found ${buckets.length} buckets with contents out of ${Buckets.length} total buckets` })
+  return { Buckets }
+  } catch ({ message }) {
+    await dialog.showErrorBox('Error', message)
+  }
+})
+
 
 ipcMain.on('submit-create', async ({ reply }, { fields }) => {
   try {
     console.log(fields)
-
-    // selected_folder
-    // region
-    // bucket_name_chars
-    // bucket_name_length
-    // bucket_number
 
     const { selected_folder, region, bucket_name_chars, bucket_name_length, bucket_number } = fields
 
@@ -161,33 +187,40 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
       reply('progress', { message: `${i + 1} of ${bucket_number} -- Put ${files.length} Object${files.length <= 1 ? '' :'s'} in Bucket ${bucketName}`, index: i + 1, total: bucket_number })
       buckets.push(bucketName)
     }
-
+    await dialog.showMessageBox({ type: 'info', message: `Successfully created ${bucket_number} bucket${bucket_number <= 1 ? '' : 's'}!` })
     reply('submit-create-result', { buckets })
   } catch ({ message }) {
-    console.log(message)
+    await dialog.showErrorBox('Error', message)
+    reply('submit-create-error')
   }
 })
 
 // 
 ipcMain.on('submit-delete', async ({ reply }, { buckets }) => {
   try {
-    for(bucket of buckets) {
+    reply('submit-delete', { number: buckets.length })
+    for(let bucket of buckets) {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      console.log(bucket, buckets.indexOf(bucket), buckets.length)
+      reply('progress', { message: `${buckets.indexOf(bucket)} of ${buckets.length} -- Deleting bucket ${bucket}`, index: buckets.indexOf(bucket), total: buckets.length })
       const { Contents } = await s3.listObjects({ Bucket: bucket }).promise()
+      // const { Contents } = await new Promise((resolve) => setTimeout(resolve({ Contents: [ { Key: '1', Key: '2' } ] }), 1000))
       if(Contents.length) {
         await s3.deleteObjects({ Bucket: bucket, Delete: { Objects: Contents.map(({ Key }) => ({ Key })) } }).promise()
-        reply('message', { message: `Deleted ${Contents.length} objects from ${bucket}` })
+        reply('message', { message: `${buckets.indexOf(bucket)} of ${buckets.length} -- Deleted ${Contents.length} object${Contents.length <= 1 ? '' :'s'} from ${bucket}` })
       } else {
         reply('message', { message: `Bucket ${bucket} is empty` })
       }
       await s3.deleteBucket({ Bucket: bucket }).promise()
-      reply('message', { message: `Deleted bucket ${bucket}` })
+      reply('progress', { message: `${buckets.indexOf(bucket) + 1} of ${buckets.length} -- Deleted bucket ${bucket}`, index: buckets.indexOf(bucket) + 1, total: buckets.length })
     }
+    await dialog.showMessageBox({ type: 'info', message: 'All buckets deleted' })
     reply('complete-delete')
   } catch ({ message }) {
-    console.log(message, 'error')
+    await dialog.showMessageBox({ type: 'error', message })
   }
 
-  reply('submitted', { buckets })
+  reply('submit-delete-result', { buckets })
 })
 
 
