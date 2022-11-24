@@ -7,30 +7,40 @@
     <script src="./list.js" defer></script>
   </head>
   <body class="is-flex is-flex-direction-column is-justify-content-space-between">
-      <div class="header">
-        <div class="tabs is-fullwidth is-boxed">
-          <ul>
-            <li><a href="./create.html">Create</a></li>
-            <li><a href="./delete.html">Delete</a></li>
-            <li class="is-active"><a href="./list.html">All Buckets</a></li>
-          </ul>
-        </div>
+    <div class="header">
+      <div class="tabs is-fullwidth is-boxed">
+        <ul>
+          <li><a href="./create.html">Create</a></li>
+          <li><a href="./delete.html">Delete</a></li>
+          <li class="is-active"><a href="./list.html">All Buckets</a></li>
+        </ul>
       </div>
-      <div class="content my-2 px-5">
-        <div class="columns">
-          <div class="column"><input type="text" name="dates" class="input is-fullwidth" /></div>
-          <div class="column"><input type="text" class="input is-fullwidth" /></div>
-        </div>
-        <div class="field">
-          <textarea class="textarea has-fixed-size" readonly rows="20"></textarea>
-        </div>
+    </div>
+    <div class="content my-2 px-5">
+      <div class="columns">
+        <div class="column"><input type="text" class="input is-fullwidth" id="search" /></div>
+        <div class="column"><input type="text" class="input is-fullwidth" id="date" /></div>
       </div>
-      <footer class="footer py-4">
-        <div class="columns">
-          <div class="column"><button type="button" class="button is-fullwidth is-light" id="main-close">CLOSE</button></div>
-          <div class="column is-hidden"><button type="button" class="button is-fullwidth is-danger" id="main-cancel">CANCEL</button></div>
-          <div class="column"><button type="button" class="button is-fullwidth is-success" id="main-submit">SUBMIT</button></div>
-        </div>
-      </footer>
+      <div class="table-container is-flex is-flex-direction-column is-justify-content-space-between" id="buckets-table">
+        <table class="table is-bordered  is-fullwidth">
+          <thead>
+            <tr>
+              <th>Bucket Name</th>
+              <th>Creation Date</th>
+              <th>Region</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <nav class="pagination m-0" role="navigation" aria-label="pagination" id="pagination"></nav>
+      </div>
+    </div>
+    <footer class="footer py-4">
+      <div class="columns">
+        <div class="column"><button type="button" class="button is-fullwidth is-light" id="main-close">CLOSE</button></div>
+        <div class="column is-hidden"><button type="button" class="button is-fullwidth is-danger" id="main-cancel">CANCEL</button></div>
+        <div class="column is-hidden"><button type="button" class="button is-fullwidth is-success" id="main-submit">SUBMIT</button></div>
+      </div>
+    </footer>
   </body>
 </html>

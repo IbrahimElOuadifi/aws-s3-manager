@@ -31,8 +31,8 @@ const createWindow = () => {
   })
 
   mainWindow.loadFile(path.join(__dirname, './pages/create.html'))
-  // mainWindow.setResizable(false)
-  // mainWindow.removeMenu()
+  mainWindow.setResizable(false)
+  mainWindow.removeMenu()
 
   if (devTools) mainWindow.webContents.openDevTools()
 }
@@ -55,7 +55,6 @@ ipcMain.handle('folder-path-select', async (_, { defaultPath }) => {
   const { filePaths: [path], canceled } = await dialog.showOpenDialog({ properties: ['openDirectory'], defaultPath })
   if(canceled) return console.log('canceled')
   new Store().set('offers-path', path)
-  // new Store().set('offers-path', path)
   const files = (await readdir(path, { withFileTypes: true }))
     .filter((dir) => dir.isDirectory())
     .map(({ name }) => name)
@@ -127,9 +126,8 @@ ipcMain.handle('get-buckets-with-contents', async () => {
     //     await dialog.showErrorBox('Error', message)
     //   }
     // }
-    console.log(Buckets.sort((a, b) => a.CreationDate - b.CreationDate).slice(0, 10).map(({ CreationDate }) => CreationDate), Buckets.length)
-    await dialog.showMessageBox({ type: 'info', message: `Found ${buckets.length} buckets with contents out of ${Buckets.length} total buckets` })
-  return { Buckets }
+    console.log({ type: 'info', message: `Found ${Buckets.length} buckets with contents out of ${Buckets.length} total buckets` })
+  return { buckets: Buckets }
   } catch ({ message }) {
     await dialog.showErrorBox('Error', message)
   }
@@ -137,10 +135,27 @@ ipcMain.handle('get-buckets-with-contents', async () => {
 
 
 ipcMain.on('submit-create', async ({ reply }, { fields }) => {
+  const buckets = []
   try {
     console.log(fields)
 
     const { selected_folder, region, bucket_name_chars, bucket_name_length, bucket_number } = fields
+
+    if(!selected_folder) return await dialog.showErrorBox('Error', 'Please select a folder')
+
+    if(!region) return await dialog.showErrorBox('Error', 'Please select a region')
+
+    if(!bucket_name_chars) return await dialog.showErrorBox('Error', 'Please enter a bucket name character set')
+
+    if(!bucket_name_length) return await dialog.showErrorBox('Error', 'Please enter a bucket name length')
+
+    if(!isNaN(bucket_name_length) && bucket_name_length < 5 && bucket_name_length > 63) return await dialog.showErrorBox('Error', 'Please enter a bucket name length between 5 and 63')
+
+    if(!bucket_number) return await dialog.showErrorBox('Error', 'Please enter a number of buckets to create')
+
+    if(isNaN(bucket_number)) return await dialog.showErrorBox('Error', 'Please enter a number of buckets to create')
+
+    if(bucket_number < 1 || bucket_number > 50) return await dialog.showErrorBox('Error', 'Please enter a number of buckets to create between 1 and 50')
 
     const files = (await readdir(selected_folder, { withFileTypes: true })).filter((dir) => dir.isFile()).map(({ name }) => ({name, path: `${selected_folder}\\${name}`}))
     console.log(files)
@@ -167,8 +182,6 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
 
 
     reply('submit-create', { bucket_number })
-
-    const buckets = []
     
     for(let i = 0; i < bucket_number; i++) {
       const bucketName = randexp(`[a-z][${bucket_name_chars}][a-z]{${bucket_name_length - 2}}`)
@@ -179,8 +192,7 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
       for(const file of files) {
         const extension = file.name.split('.').pop()
         const ContentType = getType(extension)
-        await s3.putObject({ Bucket: bucketName, Key: `${bucketName}${file.name.replace('_', '')}`, Body: Buffer.from(file.content), ACL: 'public-read', ContentType  }).promise()
-        // await new Promise((resolve) => setTimeout(resolve, 1000))
+        await s3.putObject({ Bucket: bucketName, Key: file.name.replace('_', bucketName), Body: Buffer.from(file.content), ACL: 'public-read', ContentType  }).promise()
       }
 
       console.log(bucketName? `https://${bucketName}.s3.${region}.amazonaws.com` : 'error')
@@ -191,7 +203,7 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
     reply('submit-create-result', { buckets })
   } catch ({ message }) {
     await dialog.showErrorBox('Error', message)
-    reply('submit-create-error')
+    reply('submit-create-error', { buckets })
   }
 })
 
@@ -204,7 +216,6 @@ ipcMain.on('submit-delete', async ({ reply }, { buckets }) => {
       console.log(bucket, buckets.indexOf(bucket), buckets.length)
       reply('progress', { message: `${buckets.indexOf(bucket)} of ${buckets.length} -- Deleting bucket ${bucket}`, index: buckets.indexOf(bucket), total: buckets.length })
       const { Contents } = await s3.listObjects({ Bucket: bucket }).promise()
-      // const { Contents } = await new Promise((resolve) => setTimeout(resolve({ Contents: [ { Key: '1', Key: '2' } ] }), 1000))
       if(Contents.length) {
         await s3.deleteObjects({ Bucket: bucket, Delete: { Objects: Contents.map(({ Key }) => ({ Key })) } }).promise()
         reply('message', { message: `${buckets.indexOf(bucket)} of ${buckets.length} -- Deleted ${Contents.length} object${Contents.length <= 1 ? '' :'s'} from ${bucket}` })
@@ -224,4 +235,4 @@ ipcMain.on('submit-delete', async ({ reply }, { buckets }) => {
 })
 
 
-ipcMain.on('main-close', () => app.quit())
+ipcMain.on('main-close', () => app.quit()) 

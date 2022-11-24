@@ -94,10 +94,14 @@ ipcRenderer.on('submit-create-result', (_, { buckets }) => {
     document.getElementById('buckets').value = buckets.join('\r\n')
 })
 
-ipcRenderer.on('submit-create-error', () => {
+ipcRenderer.on('submit-create-error', (_, { buckets }) => {
     document.getElementById('main-stop').parentElement.classList.add('is-hidden')
     document.getElementById('main-cancel').parentElement.classList.remove('is-hidden')
-    document.getElementById('buckets').parentElement.classList.remove('is-loading') 
+    document.getElementById('buckets').parentElement.classList.remove('is-loading')
+
+    if(buckets && buckets.length) {
+        document.getElementById('buckets').value = buckets.join('\r\n')
+    }
 })
 
 document.getElementById('main-stop').addEventListener('click', () => {
