@@ -1,28 +1,23 @@
-const { ipcRenderer } = require('electron')
+const { ipcRenderer, clipboard } = require('electron')
 const { readdir } = require('fs/promises')
 
 const REGIONS_LIST = [
-    'us-east-1',
-    'us-east-2',
-    'us-west-1',
-    'us-west-2',
-    'ap-east-1',
-    'ap-south-1',
-    'ap-northeast-3',
-    'ap-northeast-2',
-    'ap-southeast-1',
-    'ap-southeast-2',
-    'ap-northeast-1',
-    'ca-central-1',
-    'cn-north-1',
-    'cn-northwest-1',
-    'eu-central-1',
-    'eu-west-1',
-    'eu-west-2',
-    'eu-west-3',
-    'eu-north-1',
-    'me-south-1',
-    'sa-east-1'
+    { label: 'US East (N. Virginia)', value: 'us-east-1' },
+    { label: 'US East (Ohio)', value: 'us-east-2' },
+    { label: 'US West (N. California)', value: 'us-west-1' },
+    { label: 'US West (Oregon)', value: 'us-west-2' },
+    { label: 'Canada (Central)', value: 'ca-central-1' },
+    { label: 'EU (Ireland)', value: 'eu-west-1' },
+    { label: 'EU (London)', value: 'eu-west-2' },
+    { label: 'EU (Paris)', value: 'eu-west-3' },
+    { label: 'EU (Frankfurt)', value: 'eu-central-1' },
+    { label: 'Asia Pacific (Tokyo)', value: 'ap-northeast-1' },
+    { label: 'Asia Pacific (Seoul)', value: 'ap-northeast-2' },
+    { label: 'Asia Pacific (Osaka-Local)', value: 'ap-northeast-3' },
+    { label: 'Asia Pacific (Singapore)', value: 'ap-southeast-1' },
+    { label: 'Asia Pacific (Sydney)', value: 'ap-southeast-2' },
+    { label: 'Asia Pacific (Mumbai)', value: 'ap-south-1' },
+    { label: 'South America (São Paulo)', value: 'sa-east-1' },
 ]
 
 let selected_folder = null
@@ -43,13 +38,22 @@ const setFolderDetail = async (path, files) => {
     document.getElementById('folder-details').childElementCount && setSelectedFolder(path, document.getElementById('folder-details').children[0].children[0].value)
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    // document.getElementById('region').innerHTML = REGIONS_LIST.map(({ label, value }) => `<option value="${value}">${label}</option>`).join('\n')
+
+    const { success, credentials } = await ipcRenderer.invoke('check-login')
+    if (!success) return window.location.href = './account.html'
+
+    document.getElementById('region').value = REGIONS_LIST.find(({ value }) => value === credentials.region).label
+    document.getElementById('region').dataset.value = credentials.region
+
     document.getElementById('folder-path').addEventListener('click', () => ipcRenderer.invoke('folder-path-select', { defaultPath: document.getElementById('folder-path').value }).then(({ files, path }) => setFolderDetail(path, files)))
     document.getElementById('main-close').addEventListener('click', () => ipcRenderer.send('main-close'))
     document.getElementById('main-submit').addEventListener('click', () => {
         const fields = {
             selected_folder,
-            region: document.getElementById('select-region').value,
+            region: document.getElementById('region').dataset.value,
             bucket_name_chars: Array.from(document.querySelectorAll('.bucket-name-char.is-dark')).map((el) => el.getAttribute('data-pattern')).join(''),
             bucket_name_length: document.getElementById('bucket-name-length').value,
             bucket_number: document.getElementById('bucket-number').value
@@ -60,10 +64,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if(element.value !== 'LOWERCASE') element.classList.toggle('is-dark')
     }))
 
-    document.getElementById('select-region').innerHTML = REGIONS_LIST.map((region) => `<option value="${region}">${region}</option>`).join('\n')
+    document.getElementById('button-copy').addEventListener('click', ({ target }) => {
+        document.querySelector('textarea#buckets').select()
+        clipboard.writeText(document.querySelector('textarea#buckets').value)
+        target.innerText = 'Copied!'
+        setTimeout(() => target.innerText = 'Copy', 1000)
+    })
+
+    document.getElementById('button-clear').addEventListener('click', () => {
+        document.querySelector('textarea#buckets').value = ''
+    })
+
+    document.getElementById('button-export').addEventListener('click', () => {  
+        ipcRenderer.send('export-buckets', { buckets: document.querySelector('textarea#buckets').value.split('\n') })
+    })
 })
 
-const folderDetailHtml = (filename) => `<div class="field"><input class="button is-fullwidth is-small" type="button" value="${filename}"></div>`
+const folderDetailHtml = filename => `<div class="field"><input class="button is-fullwidth is-small" type="button" value="${filename}"></div>`
 
 ipcRenderer.invoke('get-default-path').then(({ files, path }) => setFolderDetail(path, files))
 
@@ -92,12 +109,14 @@ ipcRenderer.on('submit-create-result', (_, { buckets }) => {
     document.getElementById('main-cancel').parentElement.classList.remove('is-hidden')
     document.getElementById('buckets').parentElement.classList.remove('is-loading')
     document.getElementById('buckets').value = buckets.join('\r\n')
+    ipcRenderer.send('submit-stop')
 })
 
 ipcRenderer.on('submit-create-error', (_, { buckets }) => {
     document.getElementById('main-stop').parentElement.classList.add('is-hidden')
     document.getElementById('main-cancel').parentElement.classList.remove('is-hidden')
     document.getElementById('buckets').parentElement.classList.remove('is-loading')
+    ipcRenderer.send('submit-stop')
 
     if(buckets && buckets.length) {
         document.getElementById('buckets').value = buckets.join('\r\n')
@@ -105,7 +124,9 @@ ipcRenderer.on('submit-create-error', (_, { buckets }) => {
 })
 
 document.getElementById('main-stop').addEventListener('click', () => {
-    ipcRenderer.send('submit-stop')
+    ipcRenderer.invoke('request-confirm', { message: 'Are you sure you want to stop creating buckets?' }).then(result => {
+        if(result) ipcRenderer.send('submit-stop')
+    })
 })
 
 document.getElementById('main-cancel').addEventListener('click', () => {

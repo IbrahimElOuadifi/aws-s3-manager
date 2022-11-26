@@ -1,6 +1,10 @@
 const { ipcRenderer } = require('electron')
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    const { success } = await ipcRenderer.invoke('check-login')
+    if (!success) return window.location.href = './account.html'
+
     document.getElementById('main-close').addEventListener('click', () => ipcRenderer.send('main-close'))
     
     document.getElementById('main-submit').addEventListener('click', () => {
@@ -32,11 +36,22 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('buckets').value = 'Loading buckets...'
         document.getElementById('main-submit').classList.add('is-loading')
         document.getElementById('main-submit').disabled = true
+        document.getElementById('button-stop-check-emptys').classList.remove('is-hidden')
+        document.getElementById('button-empty-buckets').classList.add('is-hidden')
         ipcRenderer.invoke('get-empty-buckets').then(({ buckets }) => {
             document.getElementById('buckets').value = buckets.join('\n')
             document.getElementById('buckets').parentElement.classList.remove('is-loading')
             document.getElementById('main-submit').classList.remove('is-loading')
             document.getElementById('main-submit').disabled = false
+            document.getElementById('button-stop-check-emptys').classList.add('is-hidden')
+            document.getElementById('button-empty-buckets').classList.remove('is-hidden')
+            ipcRenderer.send('submit-stop-check-emptys')
+        })
+    })
+
+    document.getElementById('button-stop-check-emptys').addEventListener('click', () => {
+        ipcRenderer.invoke('request-confirm', { message: 'Are you sure you want to stop checking for empty buckets?' }).then(result => {
+            if(result) ipcRenderer.send('submit-stop-check-emptys')
         })
     })
 })

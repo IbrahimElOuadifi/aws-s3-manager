@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>AWS S3 Manager</title>
+    <link rel="stylesheet" href="../css/index.css" />
+    <script src="./account.js" defer></script>
+  </head>
+  <body class="is-flex is-flex-direction-column is-justify-content-space-between">
+    <div class="header">
+      <div class="tabs is-fullwidth is-boxed">
+        <ul>
+          <li><a href="./create.html">Create</a></li>
+          <li><a href="./delete.html">Delete</a></li>
+          <li><a href="./list.html">All Buckets</a></li>
+          <li class="is-active"><a href="./account.html">Account</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="content my-2 px-5">
+      <div class="columns is-centered">
+        <div class="column is-half">
+          <div class="box">
+            <form id="login-form">
+              <div class="field">
+                <label class="label">Access Key</label>
+                <div class="control">
+                  <input class="input" type="text" placeholder="Access Key" id="access-key" />
+                </div>
+              </div>
+              <div class="field">
+                <label class="label">Secret Key</label>
+                <div class="control">
+                  <input class="input" type="password" placeholder="Secret Key" id="secret-key" />
+                </div>
+              </div>
+              <div class="field">
+                <label class="label">Region</label>
+                <div class="control">
+                  <div class="select is-fullwidth">
+                    <select id="region"></select>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <div class="control">
+                  <button class="button is-link is-fullwidth" id="button-connect" type="submit">CONNECT</button>
+                </div>
+              </div>
+              <div class="field">
+                <div class="control">
+                  <button class="button is-danger is-fullwidth" id="button-disconnect" type="button">DISCONNECT</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="footer py-4">
+      <div class="columns">
+        <div class="column"><button type="button" class="button is-fullwidth is-light" id="main-close">CLOSE</button></div>
+        <div class="column is-hidden"><button type="button" class="button is-fullwidth is-danger" id="main-cancel">CANCEL</button></div>
+        <div class="column is-hidden"><button type="button" class="button is-fullwidth is-success" id="main-submit">SUBMIT</button></div>
+      </div>
+    </footer>
+  </body>
+</html>

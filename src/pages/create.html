@@ -13,6 +13,7 @@
             <li class="is-active"><a href="./create.html">Create</a></li>
             <li><a href="./delete.html">Delete</a></li>
             <li><a href="./list.html">All Buckets</a></li>
+            <li><a href="./account.html">Account</a></li>
           </ul>
         </div>
       </div>
@@ -43,9 +44,10 @@
         <div class="field">
           <label class="label">Region</label>
           <div class="control">
-            <div class="select is-fullwidth">
+            <!-- <div class="select is-fullwidth">
               <select id="select-region"></select>
-            </div>
+            </div> -->
+            <input type="text" class="input is-fullwidth" id="region" readonly />
           </div>
           <div class="field">
             <label class="label">Bucket name</label>
@@ -61,9 +63,9 @@
       </div>
       <div class="content my-2 px-5 is-hidden" id="frame-result">
         <div class="columns">
-          <div class="column"><button type="button" class="button is-fullwidth">EXPORT</button></div>
-          <div class="column"><button type="button" class="button is-fullwidth">COPY</button></div>
-          <div class="column"><button type="button" class="button is-fullwidth">CLEAN</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth" id="button-export">EXPORT</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth" id="button-copy">COPY</button></div>
+          <div class="column"><button type="button" class="button is-fullwidth" id="button-clear">CLEAR</button></div>
         </div>
         <div class="field control">
           <textarea class="textarea has-fixed-size" id="buckets" readonly rows="16"></textarea>

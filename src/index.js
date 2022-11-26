@@ -2,18 +2,18 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const Store = require('electron-store')
 const path = require('path')
 const { S3 } = require('aws-sdk')
-const { readFile, readdir } = require('fs/promises')
+const { readFile, writeFile, readdir } = require('fs/promises')
 const { randexp } = require('randexp')
 const { getType } = require('mime')
 require('dotenv').config()
 
 const s3 = new S3({
-    region: process.env.AWS_REGION,
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  region: process.env.AWS_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 })
 
-const devTools = true
+const devTools = false
 
 if (require('electron-squirrel-startup')) {
   app.quit()
@@ -33,8 +33,6 @@ const createWindow = () => {
   mainWindow.loadFile(path.join(__dirname, './pages/create.html'))
   mainWindow.setResizable(false)
   mainWindow.removeMenu()
-
-  if (devTools) mainWindow.webContents.openDevTools()
 }
 
 app.on('ready', createWindow)
@@ -71,6 +69,39 @@ ipcMain.handle('get-default-path', async () => {
   return { files, path }
 })
 
+ipcMain.handle('check-login', async () => {
+  const store = new Store()
+  if (!store.has('credentials')) return { success: false }
+
+  const credentials = JSON.parse(store.get('credentials'))
+
+  s3.config.update({
+    accessKeyId: credentials.accessKeyId,
+    secretAccessKey: credentials.secretAccessKey,
+    region: credentials.region
+  })
+  return { success: true, credentials }
+})
+
+ipcMain.handle('save-login', async (_, { accessKeyId, secretAccessKey, region }) => {
+  try {
+    await new S3({ region, accessKeyId, secretAccessKey }).listBuckets().promise()
+    await dialog.showMessageBox({ message: 'Login successful' })
+    new Store().set('credentials', JSON.stringify({ accessKeyId, secretAccessKey, region }))
+    s3.config.update({ accessKeyId, secretAccessKey, region })
+    return { success: true }
+  } catch ({ message }) {
+    await dialog.showMessageBox({ type: 'error', message })
+    return { success: false }
+  }
+})
+
+ipcMain.handle('disconnect', async () => {
+  new Store().delete('credentials')
+  await dialog.showMessageBox({ message: 'Disconnected' })
+  return { success: true }
+})
+
 ipcMain.handle('get-last-buckets', async (_, { number }) => {
   if(!number || isNaN(number)) {
     await dialog.showErrorBox('Error', 'Please enter a number')
@@ -86,10 +117,15 @@ ipcMain.handle('get-last-buckets', async (_, { number }) => {
 
 ipcMain.handle('get-empty-buckets', async ({ sender }) => {
   try {
+    let isStopeed = false
+
+    ipcMain.once('submit-stop-check-emptys',async () => isStopeed = true)
+    
     const { Buckets } = (await s3.listBuckets().promise())
     const buckets = []
     for(const bucket of Buckets) {
       console.log(bucket.Name)
+      if(isStopeed) break
       try {
         sender.send('progress', { index: Buckets.indexOf(bucket), total: Buckets.length, message: `Checking bucket ${bucket.Name} ${Buckets.indexOf(bucket)} of ${Buckets.length}` })
         const { Contents } = await s3.listObjects({ Bucket: bucket.Name }).promise()
@@ -113,19 +149,6 @@ ipcMain.handle('get-empty-buckets', async ({ sender }) => {
 ipcMain.handle('get-buckets-with-contents', async () => {
   try {
     const { Buckets } = (await s3.listBuckets().promise())
-    // const buckets = []
-    // for(const bucket of Buckets.slice(0, 10)) {
-    //   console.log(bucket.Name)
-    //   try {
-    //     const { Contents } = s3.listObjects({ Bucket: bucket.Name }).promise()
-    //     console.log(Buckets.slice(0, 10))
-    //       bucket.Contents = Contents
-    //       buckets.push(bucket)
-    //   bucket.length = Contents.length
-    //   } catch ({ message }) {
-    //     await dialog.showErrorBox('Error', message)
-    //   }
-    // }
     console.log({ type: 'info', message: `Found ${Buckets.length} buckets with contents out of ${Buckets.length} total buckets` })
   return { buckets: Buckets }
   } catch ({ message }) {
@@ -182,8 +205,15 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
 
 
     reply('submit-create', { bucket_number })
+
+    let isStopeed = false
+
+    ipcMain.once('submit-stop',async () => isStopeed = true)
     
     for(let i = 0; i < bucket_number; i++) {
+
+      if(isStopeed) break
+
       const bucketName = randexp(`[a-z][${bucket_name_chars}][a-z]{${bucket_name_length - 2}}`)
       await s3.createBucket({ Bucket: bucketName, ACL: 'bucket-owner-read', CreateBucketConfiguration: { LocationConstraint: region } }).promise()
       await s3.putPublicAccessBlock({ Bucket: bucketName, PublicAccessBlockConfiguration: { BlockPublicAcls: false, BlockPublicPolicy: false, IgnorePublicAcls: false, RestrictPublicBuckets: false } }).promise()
@@ -193,13 +223,14 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
         const extension = file.name.split('.').pop()
         const ContentType = getType(extension)
         await s3.putObject({ Bucket: bucketName, Key: file.name.replace('_', bucketName), Body: Buffer.from(file.content), ACL: 'public-read', ContentType  }).promise()
+        reply('progress', { message: `${i} of ${bucket_number} -- File ${file.name} uploaded to ${bucketName}`, index: i, total: bucket_number })
       }
 
       console.log(bucketName? `https://${bucketName}.s3.${region}.amazonaws.com` : 'error')
       reply('progress', { message: `${i + 1} of ${bucket_number} -- Put ${files.length} Object${files.length <= 1 ? '' :'s'} in Bucket ${bucketName}`, index: i + 1, total: bucket_number })
       buckets.push(bucketName)
     }
-    await dialog.showMessageBox({ type: 'info', message: `Successfully created ${bucket_number} bucket${bucket_number <= 1 ? '' : 's'}!` })
+    await dialog.showMessageBox({ type: 'info', message: `Successfully created ${buckets.length} bucket${bucket_number <= 1 ? '' : 's'}!` })
     reply('submit-create-result', { buckets })
   } catch ({ message }) {
     await dialog.showErrorBox('Error', message)
@@ -207,7 +238,6 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
   }
 })
 
-// 
 ipcMain.on('submit-delete', async ({ reply }, { buckets }) => {
   try {
     reply('submit-delete', { number: buckets.length })
@@ -234,5 +264,19 @@ ipcMain.on('submit-delete', async ({ reply }, { buckets }) => {
   reply('submit-delete-result', { buckets })
 })
 
+ipcMain.on('export-buckets', async (_, { buckets }) => {
+  try {
+    const { filePath } = await dialog.showSaveDialog({ title: 'Export buckets', defaultPath: 'buckets.txt' })
+    if(!filePath) return reply('export-buckets-error')
+    await writeFile(filePath, buckets.join('\r\n'))
+  } catch ({ message }) {
+    await dialog.showErrorBox('Error', message)
+  }
+})
+
+ipcMain.handle('request-confirm', async (_, { message }) => {
+  const { response } = await dialog.showMessageBox({ type: 'question', message, buttons: ['Yes', 'No'] })
+  return response === 0
+})
 
 ipcMain.on('main-close', () => app.quit()) 

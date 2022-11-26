@@ -97,7 +97,11 @@ const filter = ({ searchTerm, date }) => {
     getPage(filtered_buckets, 1)
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    const { success } = await ipcRenderer.invoke('check-login')
+    if (!success) return window.location.href = './account.html'
+    
     document.getElementById('main-close').addEventListener('click', () => ipcRenderer.send('main-close'))
 
     const row = document.createElement('tr')
