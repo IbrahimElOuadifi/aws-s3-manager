@@ -5,13 +5,8 @@ const { S3 } = require('aws-sdk')
 const { readFile, writeFile, readdir } = require('fs/promises')
 const { randexp } = require('randexp')
 const { getType } = require('mime')
-require('dotenv').config()
 
-const s3 = new S3({
-  region: process.env.AWS_REGION,
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-})
+let s3 = new S3()
 
 const devTools = false
 
@@ -75,10 +70,15 @@ ipcMain.handle('check-login', async () => {
 
   const credentials = JSON.parse(store.get('credentials'))
 
-  s3.config.update({
+  // s3.config.update({
+  //   accessKeyId: credentials.accessKeyId,
+  //   secretAccessKey: credentials.secretAccessKey,
+  //   region: credentials.region
+  // })
+  s3 = new S3({
+    region: credentials.region,
     accessKeyId: credentials.accessKeyId,
-    secretAccessKey: credentials.secretAccessKey,
-    region: credentials.region
+    secretAccessKey: credentials.secretAccessKey
   })
   return { success: true, credentials }
 })
@@ -88,7 +88,8 @@ ipcMain.handle('save-login', async (_, { accessKeyId, secretAccessKey, region })
     await new S3({ region, accessKeyId, secretAccessKey }).listBuckets().promise()
     await dialog.showMessageBox({ message: 'Login successful' })
     new Store().set('credentials', JSON.stringify({ accessKeyId, secretAccessKey, region }))
-    s3.config.update({ accessKeyId, secretAccessKey, region })
+    // s3.config.update({ accessKeyId, secretAccessKey, region })
+    s3 = new S3({ region, accessKeyId, secretAccessKey })
     return { success: true }
   } catch ({ message }) {
     await dialog.showMessageBox({ type: 'error', message })
@@ -149,6 +150,7 @@ ipcMain.handle('get-empty-buckets', async ({ sender }) => {
 ipcMain.handle('get-buckets-with-contents', async () => {
   try {
     const { Buckets } = (await s3.listBuckets().promise())
+
     console.log({ type: 'info', message: `Found ${Buckets.length} buckets with contents out of ${Buckets.length} total buckets` })
   return { buckets: Buckets }
   } catch ({ message }) {
@@ -215,7 +217,7 @@ ipcMain.on('submit-create', async ({ reply }, { fields }) => {
       if(isStopeed) break
 
       const bucketName = randexp(`[a-z][${bucket_name_chars}][a-z]{${bucket_name_length - 2}}`)
-      await s3.createBucket({ Bucket: bucketName, ACL: 'bucket-owner-read', CreateBucketConfiguration: { LocationConstraint: region } }).promise()
+      await s3.createBucket({ Bucket: bucketName, ACL: 'bucket-owner-read' }).promise()
       await s3.putPublicAccessBlock({ Bucket: bucketName, PublicAccessBlockConfiguration: { BlockPublicAcls: false, BlockPublicPolicy: false, IgnorePublicAcls: false, RestrictPublicBuckets: false } }).promise()
       reply('progress', { message: `${i} of ${bucket_number} -- Bucket ${bucketName} created`, index: i, total: bucket_number })
       
@@ -266,8 +268,8 @@ ipcMain.on('submit-delete', async ({ reply }, { buckets }) => {
 
 ipcMain.on('export-buckets', async (_, { buckets }) => {
   try {
-    const { filePath } = await dialog.showSaveDialog({ title: 'Export buckets', defaultPath: 'buckets.txt' })
-    if(!filePath) return reply('export-buckets-error')
+    const { filePath, canceled } = await dialog.showSaveDialog({ title: 'Export buckets', defaultPath: 'buckets.txt' })
+    if(canceled) return console.log('canceled')
     await writeFile(filePath, buckets.join('\r\n'))
   } catch ({ message }) {
     await dialog.showErrorBox('Error', message)

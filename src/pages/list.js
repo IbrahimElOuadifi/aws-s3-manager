@@ -67,11 +67,11 @@ const getPage = (buckets, page) => {
             name.innerText = bucket.Name
             const creation_date = document.createElement('td')
             creation_date.innerText = bucket.CreationDate.toDateString()
-            const length = document.createElement('td')
+            // const length = document.createElement('td')
             length.innerText = bucket.length
             row.appendChild(name)
             row.appendChild(creation_date)
-            row.appendChild(length)
+            // row.appendChild(length)
             bucket_table.appendChild(row)
         })
     } else {
